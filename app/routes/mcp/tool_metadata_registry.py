@@ -722,6 +722,49 @@ def register_memory_tools_metadata(
             ],
             "tags": ["memory", "query", "recency", "timeline"],
         },
+        {
+            "name": "rebuild_embeddings",
+            "mutates": True,
+            "description": (
+                "Rebuild embeddings for a user-scoped subset of memories without resetting "
+                "global vector storage. Targets explicit memory ids, a single project, or "
+                "all caller-owned memories."
+            ),
+            "parameters": [
+                {
+                    "name": "ctx",
+                    "type": "Context",
+                    "description": "FastMCP Context (automatically injected)",
+                    "required": True,
+                },
+                {
+                    "name": "memory_ids",
+                    "type": "Optional[List[int]]",
+                    "description": "Explicit memory ids owned by the caller; leave null to use project_id or global user scope",
+                    "required": False,
+                    "default": None,
+                    "example": [123, 124],
+                },
+                {
+                    "name": "project_id",
+                    "type": "Optional[int]",
+                    "description": "Restrict the rebuild to memories of a single project owned by the caller",
+                    "required": False,
+                    "default": None,
+                    "example": 1,
+                },
+            ],
+            "returns": (
+                "Dict with rebuilt_ids (List[int]), skipped_ids (List[int]), "
+                "failed (List[Dict[memory_id, reason]])"
+            ),
+            "examples": [
+                'execute_forgetful_tool("rebuild_embeddings", {"memory_ids": [123, 124]})',
+                'execute_forgetful_tool("rebuild_embeddings", {"project_id": 1})',
+                'execute_forgetful_tool("rebuild_embeddings", {})',
+            ],
+            "tags": ["memory", "embeddings", "admin", "repair"],
+        },
     ]
 
     for tool_def in tools:

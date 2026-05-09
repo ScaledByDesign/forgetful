@@ -673,3 +673,97 @@ def register(mcp: FastMCP):
                 "error_message": str(e),
             })
             raise ToolError(f"INTERNAL_ERROR: Marking memory obsolete failed - {type(e).__name__}: {e!s}")
+
+    @mcp.tool()
+    async def rebuild_embeddings(
+        ctx: Context,
+        memory_ids: list[int] | None = None,
+        project_id: int | None = None,
+    ) -> dict:
+        """Rebuild embeddings for a user-scoped subset of memories (issue #39).
+
+        WHEN: A small set of memories, a project, or the caller's corpus needs
+        fresh embeddings without running the destructive global --re-embed CLI.
+
+        BEHAVIOR: Re-runs the configured embedding pipeline on memories owned
+        by the authenticated user, scoped by `memory_ids` and/or `project_id`.
+        Never resets vector storage. Returns a structured result so the caller
+        can act on partial success.
+
+        NOT-USE: Switching embedding providers/dimensions across the whole
+        corpus - use the offline `--re-embed` CLI for that destructive
+        migration.
+
+        Args:
+            memory_ids: Explicit ids to rebuild (already user-scoped server-side).
+            project_id: Restrict to a single project owned by the caller.
+
+        Returns:
+            Dict with keys: rebuilt_ids (list[int]), skipped_ids (list[int]),
+            failed (list of {memory_id, reason}).
+        """
+        try:
+            logger.info("MCP Tool -> rebuild_embeddings", extra={
+                "memory_ids": memory_ids,
+                "project_id": project_id,
+            })
+
+            user = await get_user_from_auth(ctx)
+            memory_service = ctx.fastmcp.memory_service
+            repo = memory_service.memory_repo
+            if memory_ids is not None and len(memory_ids) == 0:
+                raise ToolError(
+                    "VALIDATION_ERROR: memory_ids must be non-empty if provided; "
+                    "pass null for global scope",
+                )
+            if memory_ids is not None and project_id is not None:
+                requested_count = len(set(memory_ids))
+                count_with_project = await repo.count_memories_for_targeted_rebuild(
+                    user_id=user.id,
+                    memory_ids=memory_ids,
+                    project_id=project_id,
+                )
+                count_without_project = await repo.count_memories_for_targeted_rebuild(
+                    user_id=user.id,
+                    memory_ids=memory_ids,
+                )
+                if count_with_project != count_without_project or count_without_project != requested_count:
+                    raise ToolError(
+                        "VALIDATION_ERROR: memory_ids do not all belong to "
+                        f"project_id={project_id} (or some are not owned/obsolete). "
+                        f"expected={requested_count}, matched_in_project={count_with_project}, "
+                        f"owned_total={count_without_project}",
+                    )
+
+            # Lazy import to avoid pulling re-embedding dependencies in modules
+            # that only need read-only memory access.
+            from app.services.re_embedding_service import ReEmbeddingService
+
+            service = ReEmbeddingService(
+                memory_repository=repo,
+                embedding_adapter=repo.embedding_adapter,
+            )
+            result = await service.rebuild_targeted(
+                user_id=user.id,
+                memory_ids=memory_ids,
+                project_id=project_id,
+            )
+            return {
+                "rebuilt_ids": result.rebuilt_ids,
+                "skipped_ids": result.skipped_ids,
+                "failed": result.failed,
+            }
+        except ToolError:
+            raise
+        except ValidationError as e:
+            logger.debug("MCP Tool - rebuild_embeddings validation error", extra={
+                "error_type": "ValidationError",
+                "error_message": str(e),
+            })
+            raise ToolError(f"VALIDATION_ERROR: {e!s}")
+        except Exception as e:
+            logger.error("MCP Tool -> rebuild_embeddings failed", exc_info=True, extra={
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            })
+            raise ToolError(f"INTERNAL_ERROR: Rebuilding embeddings failed - {type(e).__name__}: {e!s}")
