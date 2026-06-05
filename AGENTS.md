@@ -35,10 +35,10 @@ These tests use an in-memory SQLite database for test isolation. Fast execution 
 **Requirements**: PostgreSQL running in Docker
 **Run locally**:
 ```bash
-docker compose up -d postgres
+cd docker && docker compose down -v  
 uv run pytest -m e2e
 ```
-**Remember**: rebuild docker image if testing changes in e2e
+**Remember**: rebuild docker image if running local container service, not required however for e2e tests.
 
 
 ## Linting
