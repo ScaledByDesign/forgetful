@@ -403,6 +403,50 @@ When authentication is enabled, Forgetful automatically provisions users from to
 
 ---
 
+## CLI Configuration
+
+The `forgetful` CLI executes the same tool registry as the MCP server - locally by
+default, or against a remote deployment.
+
+### `FORGETFUL_SERVER`
+
+- **Default**: `` (empty - local mode)
+- **Purpose**: Remote deployment URL the CLI executes against. The URL is normalized
+  before use:
+  - **Scheme**: when omitted, `http://` is assumed for loopback hosts
+    (`localhost`, `127.0.0.1`, `[::1]`) and `https://` for every other host (secure by
+    default). An explicit `http://`/`https://` scheme is kept as given; any other scheme
+    (e.g. `ftp://`) is rejected.
+  - **Mount path**: when the URL has no path, the default `/mcp` mount path is appended.
+    An explicit path is left untouched.
+
+  So `localhost:8020` becomes `http://localhost:8020/mcp` and `forgetful.example.com`
+  becomes `https://forgetful.example.com/mcp`.
+- **Set by**: `forgetful auth login --server URL` (written to `~/.config/forgetful/.env`),
+  or manually via shell env / any `.env` file in the standard list.
+
+### `FORGETFUL_TOKEN`
+
+- **Default**: unset
+- **Purpose**: Bearer token for headless/CI use of the CLI against an authenticated
+  deployment. Read from the shell environment only - deliberately never stored in
+  `.env` files or the token cache. When unset, the CLI uses the browser OAuth flow.
+
+### Configuration precedence (highest wins)
+
+1. Per-invocation flags: `--server URL` / `--local`
+2. Shell environment: `FORGETFUL_SERVER`, `FORGETFUL_TOKEN`
+3. User config file: `~/.config/forgetful/.env` (written by `forgetful auth login`)
+4. Defaults: local mode, SQLite at the platform data path, FastEmbed embeddings
+
+### Token cache
+
+OAuth tokens are cached in `~/.config/forgetful/tokens/` (created `0700`) so the
+browser flow runs once, not per invocation. `forgetful auth logout` deletes this
+directory; the server-side session is untouched.
+
+---
+
 ## Memory Configuration
 
 These settings control the atomic memory system's behavior and constraints.
