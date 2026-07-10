@@ -447,3 +447,32 @@ def register(mcp: FastMCP):
             return JSONResponse({"error": str(e)}, status_code=404)
 
         return JSONResponse(result)
+
+    @mcp.custom_route("/api/v1/skills/{skill_id}/links", methods=["GET"])
+    async def get_skill_links(request: Request) -> JSONResponse:
+        """Get IDs of all content linked to a skill (reverse lookup)."""
+        try:
+            user = await get_user_from_request(request, mcp)
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=401)
+
+        skill_id = int(request.path_params["skill_id"])
+
+        try:
+            links = await mcp.skill_service.get_skill_links(
+                user_id=user.id,
+                skill_id=skill_id,
+            )
+        except NotFoundError:
+            return JSONResponse({"error": "Skill not found"}, status_code=404)
+
+        return JSONResponse({
+            "memory_ids": links.memory_ids,
+            "file_ids": links.file_ids,
+            "code_artifact_ids": links.code_artifact_ids,
+            "document_ids": links.document_ids,
+            "total_count": (
+                len(links.memory_ids) + len(links.file_ids)
+                + len(links.code_artifact_ids) + len(links.document_ids)
+            ),
+        })

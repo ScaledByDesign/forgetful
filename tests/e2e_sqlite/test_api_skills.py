@@ -530,3 +530,47 @@ class TestSkillBugRegressions:
         resp2 = await http_client.post("/api/v1/skills", json=payload)
         assert resp2.status_code == 400
         assert "already exists" in resp2.json()["error"]
+
+
+class TestSkillAPILinks:
+    """Test skill link reverse-lookup endpoint (issue #51)."""
+
+    @pytest.mark.asyncio
+    async def test_get_skill_links(self, http_client):
+        """GET /api/v1/skills/{id}/links returns linked content IDs."""
+        create_response = await http_client.post("/api/v1/skills", json={
+            "name": "api-links-skill",
+            "description": "Skill for REST link lookup",
+            "content": "# Content",
+            "tags": [],
+            "importance": 7,
+        })
+        skill_id = create_response.json()["id"]
+
+        doc_response = await http_client.post("/api/v1/documents", json={
+            "title": "API Links Document",
+            "description": "Document for REST link lookup",
+            "content": "Reference content for the skill link test.",
+        })
+        document_id = doc_response.json()["id"]
+
+        link_response = await http_client.post(
+            f"/api/v1/skills/{skill_id}/documents",
+            json={"document_id": document_id},
+        )
+        assert link_response.status_code == 200
+
+        response = await http_client.get(f"/api/v1/skills/{skill_id}/links")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["document_ids"] == [document_id]
+        assert data["memory_ids"] == []
+        assert data["file_ids"] == []
+        assert data["code_artifact_ids"] == []
+        assert data["total_count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_get_skill_links_not_found(self, http_client):
+        """GET /api/v1/skills/{id}/links returns 404 for non-existent skill."""
+        response = await http_client.get("/api/v1/skills/999999/links")
+        assert response.status_code == 404

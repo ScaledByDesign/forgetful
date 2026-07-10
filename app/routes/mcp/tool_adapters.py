@@ -2268,6 +2268,25 @@ class SkillToolAdapters:
 
         return result
 
+    async def get_skill_links(self, skill_id: int, ctx: Context) -> dict:
+        """Adapter for get_skill_links tool"""
+        user = await get_user_from_auth(ctx)
+
+        links = await self.skill_service.get_skill_links(
+            user_id=user.id, skill_id=skill_id,
+        )
+
+        return {
+            "memory_ids": links.memory_ids,
+            "file_ids": links.file_ids,
+            "code_artifact_ids": links.code_artifact_ids,
+            "document_ids": links.document_ids,
+            "total_count": (
+                len(links.memory_ids) + len(links.file_ids)
+                + len(links.code_artifact_ids) + len(links.document_ids)
+            ),
+        }
+
 
 def create_skill_adapters(skill_service, user_service: UserService) -> dict[str, Any]:
     """Create all skill tool adapters and return as dict"""
@@ -2289,4 +2308,5 @@ def create_skill_adapters(skill_service, user_service: UserService) -> dict[str,
         "unlink_skill_from_code_artifact": adapters.unlink_skill_from_code_artifact,
         "link_skill_to_document": adapters.link_skill_to_document,
         "unlink_skill_from_document": adapters.unlink_skill_from_document,
+        "get_skill_links": adapters.get_skill_links,
     }

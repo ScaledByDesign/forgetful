@@ -7,7 +7,13 @@ from sqlalchemy import select
 
 from app.config.logging_config import logging
 from app.exceptions import NotFoundError
-from app.models.skill_models import Skill, SkillCreate, SkillSummary, SkillUpdate
+from app.models.skill_models import (
+    Skill,
+    SkillCreate,
+    SkillLinks,
+    SkillSummary,
+    SkillUpdate,
+)
 from app.repositories.embeddings.embedding_adapter import EmbeddingsAdapter
 from app.repositories.embeddings.reranker_adapter import RerankAdapter
 from app.repositories.helpers import build_skill_embedding_text
@@ -888,6 +894,102 @@ class PostgresSkillRepository:
                     "user_id": str(user_id),
                     "skill_id": skill_id,
                     "document_id": document_id,
+                    "error": str(e),
+                },
+            )
+            raise
+
+    async def get_skill_links(
+        self,
+        user_id: UUID,
+        skill_id: int,
+    ) -> SkillLinks:
+        """Get IDs of all content linked to a skill (reverse lookup).
+
+        Args:
+            user_id: User ID for ownership verification
+            skill_id: Skill to look up links for
+
+        Returns:
+            SkillLinks with memory, file, code artifact and document IDs
+
+        Raises:
+            NotFoundError: If skill not found or not owned by user
+        """
+        try:
+            async with self.db_adapter.session(user_id) as session:
+                # First verify the skill exists and is owned by user
+                skill_stmt = select(SkillsTable).where(
+                    SkillsTable.id == skill_id,
+                    SkillsTable.user_id == user_id,
+                )
+                skill_result = await session.execute(skill_stmt)
+                if skill_result.scalar_one_or_none() is None:
+                    raise NotFoundError(f"Skill {skill_id} not found")
+
+                memory_stmt = select(
+                    memory_skill_association.c.memory_id,
+                ).join(
+                    MemoryTable,
+                    MemoryTable.id == memory_skill_association.c.memory_id,
+                ).where(
+                    memory_skill_association.c.skill_id == skill_id,
+                    MemoryTable.user_id == user_id,
+                )
+                memory_ids = [row.memory_id for row in await session.execute(memory_stmt)]
+
+                file_stmt = select(
+                    skill_file_association.c.file_id,
+                ).join(
+                    FilesTable,
+                    FilesTable.id == skill_file_association.c.file_id,
+                ).where(
+                    skill_file_association.c.skill_id == skill_id,
+                    FilesTable.user_id == user_id,
+                )
+                file_ids = [row.file_id for row in await session.execute(file_stmt)]
+
+                artifact_stmt = select(
+                    skill_code_artifact_association.c.code_artifact_id,
+                ).join(
+                    CodeArtifactsTable,
+                    CodeArtifactsTable.id == skill_code_artifact_association.c.code_artifact_id,
+                ).where(
+                    skill_code_artifact_association.c.skill_id == skill_id,
+                    CodeArtifactsTable.user_id == user_id,
+                )
+                code_artifact_ids = [
+                    row.code_artifact_id for row in await session.execute(artifact_stmt)
+                ]
+
+                document_stmt = select(
+                    skill_document_association.c.document_id,
+                ).join(
+                    DocumentsTable,
+                    DocumentsTable.id == skill_document_association.c.document_id,
+                ).where(
+                    skill_document_association.c.skill_id == skill_id,
+                    DocumentsTable.user_id == user_id,
+                )
+                document_ids = [
+                    row.document_id for row in await session.execute(document_stmt)
+                ]
+
+                return SkillLinks(
+                    memory_ids=memory_ids,
+                    file_ids=file_ids,
+                    code_artifact_ids=code_artifact_ids,
+                    document_ids=document_ids,
+                )
+        except NotFoundError:
+            raise
+        except Exception as e:
+            logger.error(
+                "Failed to get skill links",
+                exc_info=True,
+                extra={
+                    "user_id": str(user_id),
+                    "skill_id": skill_id,
                     "error": str(e),
                 },
             )

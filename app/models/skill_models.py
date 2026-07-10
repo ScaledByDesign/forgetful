@@ -229,3 +229,11 @@ class SkillSummary(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SkillLinks(BaseModel):
+    """IDs of all content linked to a skill (reverse lookup of the association tables)."""
+    memory_ids: list[int] = Field(default_factory=list)
+    file_ids: list[int] = Field(default_factory=list)
+    code_artifact_ids: list[int] = Field(default_factory=list)
+    document_ids: list[int] = Field(default_factory=list)

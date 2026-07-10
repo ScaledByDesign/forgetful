@@ -468,3 +468,49 @@ async def test_duplicate_skill_name_rejected_e2e(mcp_client):
         assert False, "Expected error for duplicate skill name"
     except Exception as e:
         assert "already exists" in str(e).lower()
+
+
+@pytest.mark.e2e
+async def test_get_skill_links_e2e(mcp_client):
+    """Test reverse lookup returns all linked content IDs (issue #51)."""
+    skill_id = await _create_skill_for_linking(mcp_client, "-lookup")
+    file_id = await _create_file_for_linking(mcp_client)
+    ca_id = await _create_code_artifact_for_linking(mcp_client)
+    doc_id = await _create_document_for_linking(mcp_client)
+
+    await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "link_skill_to_file",
+        "arguments": {"skill_id": skill_id, "file_id": file_id},
+    })
+    await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "link_skill_to_code_artifact",
+        "arguments": {"skill_id": skill_id, "code_artifact_id": ca_id},
+    })
+    await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "link_skill_to_document",
+        "arguments": {"skill_id": skill_id, "document_id": doc_id},
+    })
+
+    result = await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "get_skill_links",
+        "arguments": {"skill_id": skill_id},
+    })
+    assert result.data is not None
+    assert result.data["file_ids"] == [file_id]
+    assert result.data["code_artifact_ids"] == [ca_id]
+    assert result.data["document_ids"] == [doc_id]
+    assert result.data["memory_ids"] == []
+    assert result.data["total_count"] == 3
+
+
+@pytest.mark.e2e
+async def test_get_skill_links_not_found_e2e(mcp_client):
+    """Test reverse lookup on a non-existent skill raises an error."""
+    try:
+        await mcp_client.call_tool("execute_forgetful_tool", {
+            "tool_name": "get_skill_links",
+            "arguments": {"skill_id": 999999},
+        })
+        assert False, "Expected error for non-existent skill"
+    except Exception as e:
+        assert "not found" in str(e).lower()

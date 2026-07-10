@@ -6,7 +6,13 @@ Concrete implementations must provide all methods defined here.
 from typing import Protocol
 from uuid import UUID
 
-from app.models.skill_models import Skill, SkillCreate, SkillSummary, SkillUpdate
+from app.models.skill_models import (
+    Skill,
+    SkillCreate,
+    SkillLinks,
+    SkillSummary,
+    SkillUpdate,
+)
 
 
 class SkillRepository(Protocol):
@@ -218,6 +224,17 @@ class SkillRepository(Protocol):
         document_id: int,
     ) -> dict:
         """Unlink a skill from a document."""
+        ...
+
+    async def get_skill_links(
+        self,
+        user_id: UUID,
+        skill_id: int,
+    ) -> SkillLinks:
+        """Get IDs of all content linked to a skill (reverse lookup).
+
+        Raises NotFoundError if the skill does not exist or is not owned by the user.
+        """
         ...
 
     async def get_all_skill_file_links(

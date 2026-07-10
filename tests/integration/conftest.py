@@ -67,6 +67,7 @@ from app.models.project_models import (
 from app.models.skill_models import (
     Skill,
     SkillCreate,
+    SkillLinks,
     SkillSummary,
     SkillUpdate,
 )
@@ -2165,6 +2166,22 @@ class InMemorySkillRepository(SkillRepository):
             "document_id": document_id,
             "unlinked": existed,
         }
+
+    async def get_skill_links(self, user_id: UUID, skill_id: int) -> SkillLinks:
+        """Get IDs of all content linked to a skill (reverse lookup)"""
+        if skill_id not in self._skills.get(user_id, {}):
+            from app.exceptions import NotFoundError
+
+            raise NotFoundError(f"Skill {skill_id} not found")
+
+        return SkillLinks(
+            memory_ids=[m for (s, m) in self._skill_memory_links if s == skill_id],
+            file_ids=[f for (s, f) in self._skill_file_links if s == skill_id],
+            code_artifact_ids=[
+                c for (s, c) in self._skill_code_artifact_links if s == skill_id
+            ],
+            document_ids=[d for (s, d) in self._skill_document_links if s == skill_id],
+        )
 
 
 @pytest.fixture

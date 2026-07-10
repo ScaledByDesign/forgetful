@@ -438,3 +438,167 @@ async def test_unlink_skill_from_memory(mcp_client):
     assert unlink_result.data["unlinked"] is True
     assert unlink_result.data["skill_id"] == skill_id
     assert unlink_result.data["memory_id"] == memory_id
+
+
+# =============================================================================
+# Skill Link Reverse-Lookup E2E Tests (get_skill_links) — issue #51
+# =============================================================================
+
+
+@pytest.mark.asyncio
+async def test_get_skill_links_basic_e2e(mcp_client):
+    """Test reverse lookup returns linked memory, document and code artifact IDs"""
+    # Create a skill
+    skill_result = await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "create_skill",
+        "arguments": {
+            "name": "links-lookup-skill",
+            "description": "Skill for reverse link lookup testing",
+            "content": "Reverse lookup test content",
+            "tags": ["links-test"],
+            "importance": 7,
+        },
+    })
+    skill_id = skill_result.data["id"]
+
+    # Create linked content: memory, document, code artifact
+    memory_result = await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "create_memory",
+        "arguments": {
+            "title": "Links Test Memory",
+            "content": "Memory for skill link lookup testing",
+            "context": "Testing get_skill_links",
+            "keywords": ["links", "test"],
+            "tags": ["links-test"],
+            "importance": 7,
+        },
+    })
+    memory_id = memory_result.data["id"]
+
+    document_result = await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "create_document",
+        "arguments": {
+            "title": "Links Test Document",
+            "description": "Document for skill link lookup testing",
+            "content": "# Reference doc",
+        },
+    })
+    document_id = document_result.data["id"]
+
+    artifact_result = await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "create_code_artifact",
+        "arguments": {
+            "title": "Links Test Artifact",
+            "description": "Code artifact for skill link lookup testing",
+            "code": "print('hello')",
+            "language": "python",
+        },
+    })
+    code_artifact_id = artifact_result.data["id"]
+
+    # Link all three to the skill
+    await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "link_skill_to_memory",
+        "arguments": {"skill_id": skill_id, "memory_id": memory_id},
+    })
+    await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "link_skill_to_document",
+        "arguments": {"skill_id": skill_id, "document_id": document_id},
+    })
+    await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "link_skill_to_code_artifact",
+        "arguments": {"skill_id": skill_id, "code_artifact_id": code_artifact_id},
+    })
+
+    # Reverse lookup
+    links_result = await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "get_skill_links",
+        "arguments": {"skill_id": skill_id},
+    })
+    assert links_result.data is not None
+    assert links_result.data["memory_ids"] == [memory_id]
+    assert links_result.data["document_ids"] == [document_id]
+    assert links_result.data["code_artifact_ids"] == [code_artifact_id]
+    assert links_result.data["file_ids"] == []
+    assert links_result.data["total_count"] == 3
+
+
+@pytest.mark.asyncio
+async def test_get_skill_links_empty_e2e(mcp_client):
+    """Test reverse lookup on a skill with no links returns empty lists"""
+    skill_result = await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "create_skill",
+        "arguments": {
+            "name": "links-empty-skill",
+            "description": "Skill with no links",
+            "content": "No links here",
+            "tags": [],
+            "importance": 5,
+        },
+    })
+    skill_id = skill_result.data["id"]
+
+    links_result = await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "get_skill_links",
+        "arguments": {"skill_id": skill_id},
+    })
+    assert links_result.data["memory_ids"] == []
+    assert links_result.data["file_ids"] == []
+    assert links_result.data["code_artifact_ids"] == []
+    assert links_result.data["document_ids"] == []
+    assert links_result.data["total_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_get_skill_links_not_found_e2e(mcp_client):
+    """Test error handling for non-existent skill"""
+    try:
+        await mcp_client.call_tool("execute_forgetful_tool", {
+            "tool_name": "get_skill_links",
+            "arguments": {"skill_id": 999999},
+        })
+        assert False, "Expected error for non-existent skill"
+    except Exception as e:
+        assert "not found" in str(e).lower()
+
+
+@pytest.mark.asyncio
+async def test_get_skill_links_after_unlink_e2e(mcp_client):
+    """Test unlinked content disappears from the reverse lookup"""
+    skill_result = await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "create_skill",
+        "arguments": {
+            "name": "links-unlink-skill",
+            "description": "Skill for unlink lookup testing",
+            "content": "Unlink lookup test content",
+            "tags": [],
+            "importance": 5,
+        },
+    })
+    skill_id = skill_result.data["id"]
+
+    document_result = await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "create_document",
+        "arguments": {
+            "title": "Unlink Lookup Document",
+            "description": "Document for unlink lookup testing",
+            "content": "# Doc",
+        },
+    })
+    document_id = document_result.data["id"]
+
+    await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "link_skill_to_document",
+        "arguments": {"skill_id": skill_id, "document_id": document_id},
+    })
+    await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "unlink_skill_from_document",
+        "arguments": {"skill_id": skill_id, "document_id": document_id},
+    })
+
+    links_result = await mcp_client.call_tool("execute_forgetful_tool", {
+        "tool_name": "get_skill_links",
+        "arguments": {"skill_id": skill_id},
+    })
+    assert links_result.data["document_ids"] == []
+    assert links_result.data["total_count"] == 0

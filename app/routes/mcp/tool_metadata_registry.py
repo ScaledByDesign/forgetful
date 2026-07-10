@@ -2307,6 +2307,19 @@ def register_skill_tools_metadata(
             ],
             "tags": ["skill", "document", "unlink"],
         },
+        {
+            "name": "get_skill_links",
+            "description": "Get IDs of all content linked to a skill (memories, files, code artifacts, documents) - reverse lookup for skill associations",
+            "parameters": [
+                {"name": "skill_id", "type": "int", "description": "ID of the skill to look up links for", "required": True, "example": 1},
+                {"name": "ctx", "type": "Context", "description": "FastMCP Context (automatically injected)", "required": True},
+            ],
+            "returns": "Dictionary with memory_ids, file_ids, code_artifact_ids, document_ids (lists of int) and total_count (int)",
+            "examples": [
+                'execute_forgetful_tool("get_skill_links", {"skill_id": 1})',
+            ],
+            "tags": ["skill", "query", "linking"],
+        },
     ]
 
     for tool_def in tools:

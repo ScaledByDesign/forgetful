@@ -23,6 +23,7 @@ from app.models.activity_models import (
 from app.models.skill_models import (
     Skill,
     SkillCreate,
+    SkillLinks,
     SkillSummary,
     SkillUpdate,
 )
@@ -774,6 +775,33 @@ class SkillService:
             user_id=user_id,
             skill_id=skill_id,
             document_id=document_id,
+        )
+
+    async def get_skill_links(
+        self,
+        user_id: UUID,
+        skill_id: int,
+    ) -> SkillLinks:
+        """Get IDs of all content linked to a skill (reverse lookup).
+
+        Args:
+            user_id: User ID for ownership verification
+            skill_id: Skill to look up links for
+
+        Returns:
+            SkillLinks with memory, file, code artifact and document IDs
+
+        Raises:
+            NotFoundError: If skill not found or not owned by user
+        """
+        logger.info(
+            "getting links for skill",
+            extra={"skill_id": skill_id, "user_id": str(user_id)},
+        )
+
+        return await self.skill_repo.get_skill_links(
+            user_id=user_id,
+            skill_id=skill_id,
         )
 
     async def get_all_skill_file_links(
