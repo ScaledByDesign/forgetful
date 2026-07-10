@@ -88,14 +88,15 @@ cp docs/opencode/commands/*.md .opencode/command/
 
 ### Skills
 
-Copy skill folders to your OpenCode skills directory:
+Skills are maintained once, in the canonical [`skills/`](../../skills/) directory at the
+repository root. Copy them to your OpenCode skills directory:
 
 ```bash
 # Global installation
-cp -r docs/opencode/skills/* ~/.config/opencode/skill/
+cp -r skills/forgetful-* ~/.config/opencode/skill/
 
 # Or project-specific
-cp -r docs/opencode/skills/* .opencode/skill/
+cp -r skills/forgetful-* .opencode/skill/
 ```
 
 ## Available Commands
@@ -113,11 +114,8 @@ cp -r docs/opencode/skills/* .opencode/skill/
 
 Skills are automatically discovered by OpenCode and loaded on-demand via the `skill` tool.
 
-| Skill | Description |
-|-------|-------------|
-| `using-forgetful-memory` | Guidance for effective memory usage with Zettelkasten principles |
-| `curating-memories` | Maintain memory quality through updates, obsolescence, and linking |
-| `exploring-knowledge-graph` | Deep knowledge graph traversal for comprehensive context |
+The OpenCode-specific skills previously documented here have been superseded by the global
+skill set. See [`skills/README.md`](../../skills/README.md) for the full catalog.
 
 ## Usage Examples
 

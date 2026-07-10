@@ -98,15 +98,16 @@ cp docs/copilot-cli/agents/*.agent.md .github/agents/
 
 ### Skills
 
-Copy skill folders to your Copilot CLI skills directory:
+Skills are maintained once, in the canonical [`skills/`](../../skills/) directory at the
+repository root. Copy them to your Copilot CLI skills directory:
 
 ```bash
 # Global installation (all projects)
-cp -r docs/copilot-cli/skills/* ~/.copilot/skills/
+cp -r skills/forgetful-* ~/.copilot/skills/
 
 # Or repository-specific
 mkdir -p .github/skills
-cp -r docs/copilot-cli/skills/* .github/skills/
+cp -r skills/forgetful-* .github/skills/
 ```
 
 ## Available Agents
@@ -123,11 +124,8 @@ Custom agents are specialized versions of Copilot for specific tasks. Invoke the
 
 Skills provide on-demand guidance that Copilot loads when relevant to your task.
 
-| Skill | Description |
-|-------|-------------|
-| `using-forgetful-memory` | Guidance for effective memory usage with Zettelkasten principles |
-| `curating-memories` | Maintain memory quality through updates, obsolescence, and linking |
-| `exploring-knowledge-graph` | Deep knowledge graph traversal for comprehensive context |
+The Copilot CLI-specific skills previously documented here have been superseded by the
+global skill set. See [`skills/README.md`](../../skills/README.md) for the full catalog.
 
 ## Usage Examples
 
