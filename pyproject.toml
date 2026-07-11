@@ -45,6 +45,11 @@ dependencies = [
 [project.optional-dependencies]
 ollama = ["ollama>=0.4"]
 
+[dependency-groups]
+# Dev-only: drives the UAT walkthrough container; agent-shell-py lives in the
+# container image (test_harness/docker/Dockerfile), not on the host.
+harness = ["docker>=7.1.0"]
+
 [project.urls]
 Homepage = "https://github.com/scottrbk/forgetful"
 Repository = "https://github.com/scottrbk/forgetful"

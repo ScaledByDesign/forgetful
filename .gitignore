@@ -24,3 +24,7 @@ app/_version.py
 
 # serena
 .serena
+
+# UAT walkthrough harness artifacts
+test_harness/runs/
+test_harness/docker/requirements.lock
