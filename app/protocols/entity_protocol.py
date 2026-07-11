@@ -386,15 +386,15 @@ class EntityRepository(Protocol):
         self,
         user_id: UUID,
         entity_id: int,
-    ) -> list[int]:
-        """Get all memory IDs linked to a specific entity
+    ) -> list[tuple[int, str]]:
+        """Get all memories linked to a specific entity
 
         Args:
             user_id: User ID for ownership verification
             entity_id: Entity ID to get memories for
 
         Returns:
-            List of memory IDs linked to this entity
+            List of (memory_id, title) tuples for memories linked to this entity
 
         Raises:
             NotFoundError: If entity not found or not owned by user

@@ -81,13 +81,12 @@ overview" fails the test — split it.
   keywords ≤10, tags ≤10.
 - Set `importance` from the rubric below. About 70% of memories belong at 7–8; reserve 9–10.
 
-| Score | Use for |
+| Band | Use for |
 |---|---|
-| 10 | Foundational: personal facts, architectural principles in constant use |
-| 9 | Critical solutions, major decisions |
-| 8 | Useful patterns, strong preferences, tool choices |
-| 7 | Standard implementations, project milestones |
-| 6 | Minor context, helper details |
+| 9–10 | Foundational: personal facts, architectural principles in constant use |
+| 8–9 | Critical solutions, major decisions |
+| 7–8 | Useful patterns, strong preferences, tool choices, standard implementations |
+| 6–7 | Milestones, minor context |
 | 5 | Noise floor: bulk/automated captures meant to stay out of normal recall |
 
 - Stamp provenance when derived from source material: `source_repo`, `source_files`,

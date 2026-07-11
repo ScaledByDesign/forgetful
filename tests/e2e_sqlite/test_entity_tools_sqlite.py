@@ -1041,6 +1041,15 @@ async def test_get_entity_memories_basic_e2e(mcp_client):
     for mid in memory_ids:
         assert mid in result.data["memory_ids"]
 
+    # "memories" must carry {id, title} objects matching memory_ids
+    assert "memories" in result.data
+    assert len(result.data["memories"]) == 3
+    returned_ids = {m["id"] for m in result.data["memories"]}
+    assert returned_ids == set(memory_ids)
+    titles_by_id = {m["id"]: m["title"] for m in result.data["memories"]}
+    for i, mid in enumerate(memory_ids):
+        assert titles_by_id[mid] == f"Memory for Entity Query Test SQLite {i}"
+
 
 @pytest.mark.asyncio
 async def test_get_entity_memories_empty_e2e(mcp_client):
@@ -1065,6 +1074,7 @@ async def test_get_entity_memories_empty_e2e(mcp_client):
     assert result.data is not None
     assert result.data["count"] == 0
     assert result.data["memory_ids"] == []
+    assert result.data["memories"] == []
 
 
 @pytest.mark.asyncio
@@ -1140,3 +1150,6 @@ async def test_get_entity_memories_after_unlink_e2e(mcp_client):
     assert result.data["count"] == 1
     assert memory_ids[1] in result.data["memory_ids"]
     assert memory_ids[0] not in result.data["memory_ids"]
+    assert len(result.data["memories"]) == 1
+    assert result.data["memories"][0]["id"] == memory_ids[1]
+    assert result.data["memories"][0]["title"] == "Memory for Unlink Test SQLite 1"

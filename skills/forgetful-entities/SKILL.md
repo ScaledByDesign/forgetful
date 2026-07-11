@@ -37,15 +37,18 @@ Can you point at it? "Sarah Chen" is an entity; "Sarah is great at debugging asy
 is a memory linked to her. The fact stays a memory (`forgetful-remember`); the thing it is
 about becomes the entity.
 
-Before creating, `search_entities` for the thing under its likely names.
+Before creating, `search_entities` for the thing under its likely names — it matches both
+`name` and `aka`. Set `aka` at creation time for any alternative names the thing goes by, so
+a later dedupe search under a different name still finds it.
 
 Done when: the thing either already exists (use it) or is confirmed new.
 
 ## Step 2 — Create with a type
 
-`create_entity` with a name and type. Check `list_entities` for the types already in use
-and match them — a graph where servers are sometimes "device" and sometimes "machine"
-fragments reverse lookups.
+`create_entity` with a name and type: Organization, Individual, Team, Device, System, or
+Other (`custom_type` required when Other). Stored Title-case; matched case-insensitively on
+input. Check `list_entities` for the types already in use and match them — a graph where
+servers are sometimes typed "Device" and sometimes "System" fragments reverse lookups.
 
 Done when: the entity exists once, typed consistently with the existing graph.
 

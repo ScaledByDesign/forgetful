@@ -136,8 +136,8 @@ def build_parser() -> argparse.ArgumentParser:
     memory_search.add_argument("query", help="Search query")
     memory_search.add_argument(
         "-c", "--context",
-        default="cli search",
-        help='Why you are searching (improves ranking; default: "cli search")',
+        required=True,
+        help="Why you are searching (required; improves ranking)",
     )
     memory_search.add_argument(
         "-n", "--limit",

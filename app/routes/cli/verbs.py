@@ -14,7 +14,6 @@ from app.routes.cli.render import (
     to_jsonable,
 )
 
-DEFAULT_QUERY_CONTEXT = "cli search"
 DEFAULT_SAVE_CONTEXT = "Saved from the Forgetful CLI"
 
 

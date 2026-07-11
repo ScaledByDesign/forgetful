@@ -41,7 +41,8 @@ Track visited memory and entity IDs throughout — a revisited ID means that bra
 ## Phase 1 — Semantic entry
 
 Broad `query_memory` on the topic (with `query_context` stating the investigation's intent).
-The goal is entry points, so favour breadth over precision here.
+The goal is entry points, so favour breadth over precision here — raise `k` above its
+default of 3 (max 20) rather than settle for a narrow first pass.
 
 Done when: a handful of strong entry memories are identified.
 
@@ -69,7 +70,9 @@ Done when: the connections between entities are mapped, cycles skipped via the v
 ## Phase 5 — Harvest entity-linked memories
 
 `get_entity_memories` on the entities that emerged as central — this surfaces knowledge
-attached to the *thing* that topic-based queries miss.
+attached to the *thing* that topic-based queries miss. It returns linked memory IDs paired
+with titles, not full content: scan the titles for relevance, then `get_memory` per chosen
+ID for the text itself.
 
 Done when: central entities have had their attached knowledge collected.
 

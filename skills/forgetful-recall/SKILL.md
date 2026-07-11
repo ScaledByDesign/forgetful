@@ -33,7 +33,8 @@ Get any operation's schema at runtime: `how_to_use_forgetful_tool` (MCP) or
 
 ## Step 1 — Shape the query
 
-Always pass `query_context` alongside `query`: the two are embedded together, and ranking
+`query_context` is a required parameter alongside `query`, not optional flavor text — the
+call errors without it. Pass it deliberately: the two are embedded together, and ranking
 genuinely shifts with intent ("auth" while implementing a feature ranks differently than
 "auth" while debugging login). Include exact identifiers verbatim — error codes, function
 names, config keys — the sparse full-text leg of the search matches them literally.
@@ -43,8 +44,12 @@ Done when: both `query` and `query_context` are written, not just a bare keyword
 ## Step 2 — Scope deliberately
 
 Reads are cross-project by default, and usually should stay that way — knowledge transfers.
-Narrow with `project_ids` when the task is project-bound. Use `importance_threshold` and
-tags as noise filters, with semantic search staying the primary retrieval.
+Narrow with `project_ids` when the task is project-bound; add `strict_project_filter=True`
+to also keep linked memories inside those projects (the default `False` lets links cross
+them). Use `importance_threshold` to cut noise — it excludes anything scored below the value
+given, pairing naturally with `forgetful-remember`'s rubric, where 5 is the noise floor for
+bulk/automated captures. Adjust `k` to trade breadth for focus. These are filters layered on
+top of semantic search, which stays the primary retrieval mechanism throughout.
 
 Done when: the scope is a choice, not a default accident.
 

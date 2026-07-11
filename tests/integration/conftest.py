@@ -1090,8 +1090,13 @@ class InMemoryEntityRepository(EntityRepository):
         self._entity_project_links: dict[
             int, set[int],
         ] = {}  # entity_id -> set of project_ids
+        self._memory_titles: dict[int, str] = {}  # memory_id -> title
         self._next_entity_id = 1
         self._next_relationship_id = 1
+
+    def set_memory_title(self, memory_id: int, title: str) -> None:
+        """Test helper: register a title for a memory_id (mimics a real Memory row)"""
+        self._memory_titles[memory_id] = title
 
     async def create_entity(self, user_id: UUID, entity_data: EntityCreate) -> Entity:
         entity_id = self._next_entity_id
@@ -1412,8 +1417,8 @@ class InMemoryEntityRepository(EntityRepository):
                 links.append((entity_id, memory_id))
         return links
 
-    async def get_entity_memories(self, user_id: UUID, entity_id: int) -> list[int]:
-        """Get all memory IDs linked to a specific entity"""
+    async def get_entity_memories(self, user_id: UUID, entity_id: int) -> list[tuple[int, str]]:
+        """Get all (memory_id, title) pairs linked to a specific entity"""
         # Verify entity exists
         entity = await self.get_entity_by_id(user_id, entity_id)
         if not entity:
@@ -1421,9 +1426,11 @@ class InMemoryEntityRepository(EntityRepository):
 
             raise NotFoundError(f"Entity {entity_id} not found")
 
-        # Return list of memory IDs linked to this entity
+        # Return (memory_id, title) pairs for memories linked to this entity
         memory_ids = self._entity_memory_links.get(entity_id, set())
-        return list(memory_ids)
+        return [
+            (mid, self._memory_titles.get(mid, f"Memory {mid}")) for mid in memory_ids
+        ]
 
 
 @pytest.fixture

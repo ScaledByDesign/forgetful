@@ -414,6 +414,14 @@ class TestEntityMemoryLinks:
         assert data["count"] == 2
         assert set(data["memory_ids"]) == set(memory_ids)
 
+        # "memories" must carry {id, title} objects matching memory_ids
+        assert len(data["memories"]) == 2
+        returned_ids = {m["id"] for m in data["memories"]}
+        assert returned_ids == set(memory_ids)
+        titles_by_id = {m["id"]: m["title"] for m in data["memories"]}
+        for i, memory_id in enumerate(memory_ids):
+            assert titles_by_id[memory_id] == f"Test Memory {i}"
+
     @pytest.mark.asyncio
     async def test_get_entity_memories_empty(self, http_client):
         """GET /api/v1/entities/{id}/memories returns empty for entity with no links."""
@@ -428,6 +436,7 @@ class TestEntityMemoryLinks:
         data = response.json()
         assert data["count"] == 0
         assert data["memory_ids"] == []
+        assert data["memories"] == []
 
     @pytest.mark.asyncio
     async def test_get_entity_memories_not_found(self, http_client):

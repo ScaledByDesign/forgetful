@@ -38,16 +38,18 @@ def register(mcp: FastMCP):
         aka: list[str] = None,
         project_ids: list[int] = None,
     ) -> Entity:
-        """Create entity representing a real-world entity (organization, individual, team, device).
+        """Create entity representing a real-world entity (organization, individual, team,
+        device, system).
 
         WHAT: Stores information about real-world entities that can be referenced by memories
         and connected through relationships to form a knowledge graph. Entities represent
-        people, organizations, teams, devices, or custom entity types.
+        people, organizations, teams, devices, software systems, or custom entity types.
 
         WHEN: When tracking information about entities that appear in your work:
         - People (teammates, clients, experts)
         - Organizations (companies, teams, departments)
         - Devices (servers, workstations, infrastructure)
+        - Systems (services, packages, databases, repos, external dependencies)
         - Custom entities specific to your domain
 
         BEHAVIOR: Creates entity with provided details. Can be associated with a project
@@ -83,6 +85,13 @@ def register(mcp: FastMCP):
         )
 
         create_entity(
+            name="auth-service",
+            entity_type="System",
+            notes="Handles authentication and session issuance for the platform",
+            tags=["backend", "auth"]
+        )
+
+        create_entity(
             name="Message Queue",
             entity_type="Other",
             custom_type="Middleware",
@@ -92,7 +101,7 @@ def register(mcp: FastMCP):
 
         Args:
             name: Entity name (max 200 chars) - searchable identifier
-            entity_type: Entity type: Organization, Individual, Team, Device, or Other
+            entity_type: Entity type: Organization, Individual, Team, Device, System, or Other
             custom_type: Required when entity_type is "Other" - specify custom type
             notes: Additional context about this entity (bio, description, purpose)
             tags: Optional tags for discovery and categorization (max 10)
@@ -199,7 +208,7 @@ def register(mcp: FastMCP):
 
         FILTERS:
         - project_ids: Show only entities linked to ANY of these projects
-        - entity_type: Filter by type (Organization, Individual, Team, Device, Other)
+        - entity_type: Filter by type (Organization, Individual, Team, Device, System, Other)
         - tags: Show entities with ANY of these tags (OR logic)
 
         Args:
@@ -273,7 +282,7 @@ def register(mcp: FastMCP):
         (not available for entities), searching memories (use query_memory).
 
         FILTERS (optional):
-        - entity_type: Filter by type (Organization, Individual, Team, Device, Other)
+        - entity_type: Filter by type (Organization, Individual, Team, Device, System, Other)
         - tags: Show entities with ANY of these tags (OR logic)
         - limit: Maximum results (1-100, default 20)
 
@@ -959,8 +968,9 @@ def register(mcp: FastMCP):
     ) -> dict:
         """Get all memories linked to a specific entity.
 
-        WHAT: Returns the list of memory IDs associated with a specific entity,
-        useful for understanding what knowledge is attached to entities.
+        WHAT: Returns the list of memory IDs and titles associated with a specific
+        entity, useful for understanding what knowledge is attached to entities
+        without needing a separate get_memory call per memory.
 
         WHEN: When you need to find all memories linked to an entity:
         - Before deleting or merging duplicate entities
@@ -968,23 +978,27 @@ def register(mcp: FastMCP):
         - During entity deduplication workflows
         - To audit entity-memory relationships
 
-        BEHAVIOR: Returns list of memory IDs and total count. Requires entity to exist
-        and be owned by the requesting user. Returns empty list (not error) if entity
-        has no linked memories.
+        BEHAVIOR: Returns list of memory IDs, total count, and memory id/title
+        pairs. Requires entity to exist and be owned by the requesting user.
+        Returns empty lists (not error) if entity has no linked memories.
 
         Examples:
         get_entity_memories(entity_id=42)
-        # Returns: {"memory_ids": [1, 5, 17, 23], "count": 4}
+        # Returns: {"memory_ids": [1, 5], "count": 2,
+        #           "memories": [{"id": 1, "title": "Q3 Roadmap"},
+        #                        {"id": 5, "title": "Onboarding Notes"}]}
 
         get_entity_memories(entity_id=99)
-        # Returns: {"memory_ids": [], "count": 0}  # Entity exists but has no memories
+        # Returns: {"memory_ids": [], "count": 0, "memories": []}
+        # Entity exists but has no memories
 
         Args:
             entity_id: The entity ID to get memories for
             ctx: Context (automatically injected)
 
         Returns:
-            Dict with "memory_ids" (list of ints) and "count" (int)
+            Dict with "memory_ids" (list of ints), "count" (int), and "memories"
+            (list of {"id": int, "title": str} objects, same order as memory_ids)
 
         Raises:
             ToolError: If entity not found or user not authorized
@@ -997,7 +1011,7 @@ def register(mcp: FastMCP):
 
         try:
             entity_service = ctx.fastmcp.entity_service
-            memory_ids, count = await entity_service.get_entity_memories(
+            memory_ids, count, memories = await entity_service.get_entity_memories(
                 user_id=user.id,
                 entity_id=entity_id,
             )
@@ -1005,6 +1019,7 @@ def register(mcp: FastMCP):
             return {
                 "memory_ids": memory_ids,
                 "count": count,
+                "memories": [{"id": mid, "title": title} for mid, title in memories],
             }
 
         except NotFoundError as e:

@@ -52,9 +52,10 @@ Done when: both succeed against the intended target (local or the remote URL).
 
 ## The machine contract
 
-For scripts and agents, always pass `--json`: results are machine JSON, errors arrive as
-`{"error": ...}` on stderr. Exit codes are contractual — `0` success, `1` tool or runtime
-error, `2` usage error. Parse output, branch on exit code.
+For scripts and agents, pass `--json` on data commands — `tools`, `call`, `memory`, and
+`project` verbs: results are machine JSON, errors arrive as `{"error": ...}` on stderr. `auth`
+subcommands are human-oriented and don't take `--json`. Exit codes are contractual — `0`
+success, `1` tool or runtime error, `2` usage error. Parse output, branch on exit code.
 
 ## The discovery ladder
 

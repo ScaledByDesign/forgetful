@@ -53,15 +53,22 @@ async def test_search_maps_flags_onto_query_memory_arguments():
     )]
 
 
-async def test_search_defaults_query_context_and_omits_optionals():
+async def test_search_omits_optional_flags_when_only_context_given():
     executor = RecordingExecutor({"query_memory": QUERY_RESULT})
 
-    await verbs.run(executor, _args(["memory", "search", "dns fix"]))
+    await verbs.run(executor, _args(["memory", "search", "dns fix", "-c", "debugging wsl"]))
 
     assert executor.calls == [(
         "query_memory",
-        {"query": "dns fix", "query_context": "cli search"},
+        {"query": "dns fix", "query_context": "debugging wsl"},
     )]
+
+
+def test_search_without_context_flag_exits_with_usage_error():
+    with pytest.raises(SystemExit) as excinfo:
+        _args(["memory", "search", "dns fix"])
+
+    assert excinfo.value.code == 2
 
 
 async def test_save_maps_flags_onto_create_memory_arguments():
@@ -101,7 +108,9 @@ async def test_project_name_resolves_to_id_via_list_projects():
         "query_memory": QUERY_RESULT,
     })
 
-    await verbs.run(executor, _args(["memory", "search", "dns", "-p", "forgetful"]))
+    await verbs.run(executor, _args(
+        ["memory", "search", "dns", "-p", "forgetful", "-c", "resolving project scoping"],
+    ))
 
     assert executor.calls[0] == ("list_projects", {})
     assert executor.calls[1][1]["project_ids"] == [4]
@@ -111,7 +120,9 @@ async def test_unknown_project_name_raises_with_available_names():
     executor = RecordingExecutor({"list_projects": PROJECT_LISTING})
 
     with pytest.raises(Exception) as excinfo:
-        await verbs.run(executor, _args(["memory", "search", "dns", "-p", "nope"]))
+        await verbs.run(executor, _args(
+            ["memory", "search", "dns", "-p", "nope", "-c", "checking unknown project"],
+        ))
 
     message = str(excinfo.value)
     assert "nope" in message

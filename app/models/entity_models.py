@@ -18,6 +18,7 @@ class EntityType(StrEnum):
     INDIVIDUAL = "Individual"
     TEAM = "Team"
     DEVICE = "Device"
+    SYSTEM = "System"
     OTHER = "Other"
 
     @classmethod
@@ -40,6 +41,7 @@ class EntityCreate(BaseModel):
         Person: name="Sarah Chen", entity_type="Individual", notes="Lead backend developer..."
         Company: name="TechFlow Systems", entity_type="Organization", notes="Cloud infrastructure provider..."
         Device: name="Cache Server 01", entity_type="Device", notes="Redis cluster primary node..."
+        System: name="auth-service", entity_type="System", notes="Handles platform authentication..."
         Custom: name="Message Queue", entity_type="Other", custom_type="Middleware"
     """
     name: str = Field(
@@ -50,7 +52,7 @@ class EntityCreate(BaseModel):
     )
     entity_type: EntityType = Field(
         ...,
-        description="Entity type: Organization, Individual, Team, Device, or Other",
+        description="Entity type: Organization, Individual, Team, Device, System, or Other",
     )
     custom_type: str | None = Field(
         default=None,

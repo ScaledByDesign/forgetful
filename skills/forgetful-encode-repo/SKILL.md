@@ -51,10 +51,11 @@ Done when: there is a source list of what will be encoded, ordered by signal.
 
 ## Step 3 — Model the system as entities
 
-Per `forgetful-entities`: the system itself, its key components (services, packages,
-databases, external dependencies that matter), and their structure as relationships —
-`part_of` for composition, `depends_on` for coupling. Dedupe against existing entities on a
-refresh.
+Skills referenced by name below resolve via `search_skills` → `export_skill` when not
+already available. Per `forgetful-entities`: the system itself and its key components
+(services, packages, databases, external dependencies that matter) as `entity_type:
+"System"`, and their structure as relationships — `part_of` for composition, `depends_on`
+for coupling. Dedupe against existing entities on a refresh.
 
 Done when: the architecture is walkable as a graph, components to system, dependencies out.
 
@@ -66,8 +67,9 @@ govern every write here):
 - **Documents** for long-form understanding: architecture overviews, subsystem guides,
   design analyses.
 - **Atomic memories** as the entry points: decisions, conventions, patterns, constraints —
-  each linked to its document via `document_ids`, linked to the entities it concerns, and
-  stamped with `source_repo` and `source_files`.
+  each linked to its document via `document_ids`, stamped with `source_repo` and
+  `source_files`, and linked to the entities it concerns via a separate
+  `link_entity_to_memory` call (not something `create_memory` does for you).
 
 On a refresh, query first per source area: update what drifted, mark obsolete what the code
 contradicts, create only what is new.
@@ -79,7 +81,9 @@ or explicitly had nothing worth encoding.
 
 Close with a coverage report, in place of "done": project ID, entities created/updated,
 memories created/updated/obsoleted, documents written, source areas skipped and why, and
-the areas where knowledge is thin. The report is the encode's acceptance surface — a reader
-should be able to spot a gap from it alone.
+the areas where knowledge is thin. Note repo-level gaps the survey turned up too — missing
+docs, absent CI, and the like — not only gaps in the encoding itself. Deliver the report in
+the final response to the user; it is not written anywhere in Forgetful. The report is the
+encode's acceptance surface — a reader should be able to spot a gap from it alone.
 
 Done when: the report is delivered and honest about gaps.

@@ -1273,10 +1273,10 @@ def register_entity_tools_metadata(
         {
             "name": "create_entity",
             "mutates": True,
-            "description": "Create entity representing a real-world entity (organization, individual, team, device)",
+            "description": "Create entity representing a real-world entity (organization, individual, team, device, system)",
             "parameters": [
                 {"name": "name", "type": "str", "description": "Entity name", "required": True, "example": "Anthropic"},
-                {"name": "entity_type", "type": "str", "description": "Entity type (organization, individual, team, device, other)", "required": True, "example": "organization"},
+                {"name": "entity_type", "type": "str", "description": "Entity type (organization, individual, team, device, system, other)", "required": True, "example": "organization"},
                 {"name": "ctx", "type": "Context", "description": "FastMCP Context (automatically injected)", "required": True},
                 {"name": "custom_type", "type": "Optional[str]", "description": "Custom type if 'other' is selected", "required": False, "default": None, "example": "ai-company"},
                 {"name": "notes", "type": "Optional[str]", "description": "Additional notes", "required": False, "default": None, "example": "AI safety and research company"},
@@ -1456,7 +1456,7 @@ def register_entity_tools_metadata(
             "parameters": [
                 {"name": "source_entity_id", "type": "int", "description": "Source entity ID", "required": True, "example": 1},
                 {"name": "target_entity_id", "type": "int", "description": "Target entity ID", "required": True, "example": 2},
-                {"name": "relationship_type", "type": "str", "description": "Relationship type (works_for, member_of, owns, reports_to, collaborates_with, etc.)", "required": True, "example": "works_for"},
+                {"name": "relationship_type", "type": "str", "description": "Relationship type (part_of, depends_on, uses, works_for, member_of, owns, etc.)", "required": True, "example": "part_of"},
                 {"name": "ctx", "type": "Context", "description": "FastMCP Context (automatically injected)", "required": True},
                 {"name": "strength", "type": "Optional[float]", "description": "Relationship strength (0.0-1.0)", "required": False, "default": None, "example": 0.9},
                 {"name": "confidence", "type": "Optional[float]", "description": "Confidence level (0.0-1.0)", "required": False, "default": None, "example": 0.95},
@@ -1473,6 +1473,7 @@ def register_entity_tools_metadata(
             "returns": "EntityRelationship with id and timestamps",
             "examples": [
                 'execute_forgetful_tool("create_entity_relationship", {"source_entity_id": 1, "target_entity_id": 2, "relationship_type": "works_for"})',
+                'execute_forgetful_tool("create_entity_relationship", {"source_entity_id": 8, "target_entity_id": 12, "relationship_type": "part_of"})',
             ],
             "tags": ["entity", "relationship", "knowledge-graph"],
         },
@@ -1483,7 +1484,7 @@ def register_entity_tools_metadata(
                 {"name": "entity_id", "type": "int", "description": "Entity ID", "required": True, "example": 1},
                 {"name": "ctx", "type": "Context", "description": "FastMCP Context (automatically injected)", "required": True},
                 {"name": "direction", "type": "Optional[str]", "description": "Filter by direction (outgoing, incoming, both)", "required": False, "default": None, "example": "outgoing"},
-                {"name": "relationship_type", "type": "Optional[str]", "description": "Filter by type", "required": False, "default": None, "example": "works_for"},
+                {"name": "relationship_type", "type": "Optional[str]", "description": "Filter by type", "required": False, "default": None, "example": "part_of"},
             ],
             "returns": "Dictionary with relationships list",
             "examples": [
@@ -1539,9 +1540,12 @@ def register_entity_tools_metadata(
                 {"name": "entity_id", "type": "int", "description": "ID of the entity to get memories for", "required": True, "example": 42},
                 {"name": "ctx", "type": "Context", "description": "FastMCP Context (automatically injected)", "required": True},
             ],
-            "returns": "Dictionary with memory_ids (list of int) and count (int)",
+            "returns": "Dictionary with memory_ids (list of int), count (int), and memories "
+                       "(list of {id, title} objects, same order as memory_ids)",
             "examples": [
                 'execute_forgetful_tool("get_entity_memories", {"entity_id": 42})',
+                '# Returns: {"memory_ids": [3, 7], "count": 2, "memories": '
+                '[{"id": 3, "title": "Q3 Roadmap"}, {"id": 7, "title": "Onboarding Notes"}]}',
             ],
             "tags": ["entity", "memory", "query", "linking"],
         },

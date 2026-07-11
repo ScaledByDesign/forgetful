@@ -828,7 +828,7 @@ class EntitiesTable(Base):
 
     # Entity information
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    entity_type: Mapped[str] = mapped_column(String(100), nullable=False)  # Organization, Individual, Team, Device, Other
+    entity_type: Mapped[str] = mapped_column(String(100), nullable=False)  # Organization, Individual, Team, Device, System, Other
     custom_type: Mapped[str] = mapped_column(String(100), nullable=True)  # Used when entity_type is "Other"
     notes: Mapped[str] = mapped_column(Text, nullable=True)
     tags: Mapped[list[str]] = mapped_column(JSON, nullable=False)  # ARRAY -> JSON

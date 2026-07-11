@@ -1408,11 +1408,15 @@ class EntityToolAdapters:
         """Adapter for get_entity_memories tool"""
         user = await get_user_from_auth(ctx)
 
-        memory_ids, count = await self.entity_service.get_entity_memories(
+        memory_ids, count, memories = await self.entity_service.get_entity_memories(
             user_id=user.id, entity_id=entity_id,
         )
 
-        return {"memory_ids": memory_ids, "count": count}
+        return {
+            "memory_ids": memory_ids,
+            "count": count,
+            "memories": [{"id": mid, "title": title} for mid, title in memories],
+        }
 
 
 def create_entity_adapters(

@@ -1085,7 +1085,7 @@ class EntityService:
         self,
         user_id: UUID,
         entity_id: int,
-    ) -> tuple[list[int], int]:
+    ) -> tuple[list[int], int, list[tuple[int, str]]]:
         """Get all memories linked to a specific entity
 
         Args:
@@ -1093,7 +1093,8 @@ class EntityService:
             entity_id: Entity ID to get memories for
 
         Returns:
-            Tuple of (memory_ids_list, count)
+            Tuple of (memory_ids_list, count, memories) where memories is a list of
+            (memory_id, title) tuples in the same order as memory_ids_list
 
         Raises:
             NotFoundError: If entity not found or not owned by user
@@ -1106,10 +1107,11 @@ class EntityService:
             },
         )
 
-        memory_ids = await self.entity_repo.get_entity_memories(
+        memories = await self.entity_repo.get_entity_memories(
             user_id=user_id,
             entity_id=entity_id,
         )
+        memory_ids = [memory_id for memory_id, _ in memories]
 
         logger.info(
             "entity memories retrieved",
@@ -1120,4 +1122,4 @@ class EntityService:
             },
         )
 
-        return memory_ids, len(memory_ids)
+        return memory_ids, len(memory_ids), memories

@@ -43,7 +43,7 @@ Good memories are:
 
 Entities represent concrete nouns that exist in the world. They can have relationships with each other and link to memories. Use entities when you want to track WHO or WHAT is involved, not just the knowledge itself.
 
-**Types:** Organization, Individual, Team, Device, Product, Service (or custom)
+**Types:** Organization, Individual, Team, Device, System, Other (with `custom_type`)
 
 **Examples:**
 - Sarah Chen (Individual) - "Backend lead, payments team"

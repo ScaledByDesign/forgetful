@@ -53,6 +53,49 @@ async def test_create_entity_with_custom_type(test_entity_service):
 
 
 @pytest.mark.asyncio
+async def test_create_entity_with_system_type(test_entity_service):
+    """Test creating an entity with the System type and round-tripping via get_entity"""
+    user_id = uuid4()
+
+    entity_data = EntityCreate(
+        name="auth-service",
+        entity_type=EntityType.SYSTEM,
+        notes="Handles authentication for the platform",
+        tags=["backend"],
+    )
+
+    entity = await test_entity_service.create_entity(user_id, entity_data)
+
+    assert entity.id is not None
+    assert entity.entity_type == EntityType.SYSTEM
+    assert entity.custom_type is None
+
+    retrieved = await test_entity_service.get_entity(user_id, entity.id)
+
+    assert retrieved.entity_type == EntityType.SYSTEM
+
+
+@pytest.mark.asyncio
+async def test_create_entity_with_lowercase_system_type_is_case_insensitive(test_entity_service):
+    """Test that entity_type="system" (lowercase) resolves to EntityType.SYSTEM"""
+    user_id = uuid4()
+
+    entity_data = EntityCreate(
+        name="billing-db",
+        entity_type="system",
+        tags=[],
+    )
+
+    entity = await test_entity_service.create_entity(user_id, entity_data)
+
+    assert entity.entity_type == EntityType.SYSTEM
+
+    retrieved = await test_entity_service.get_entity(user_id, entity.id)
+
+    assert retrieved.entity_type == EntityType.SYSTEM
+
+
+@pytest.mark.asyncio
 async def test_get_entity(test_entity_service):
     user_id = uuid4()
 
@@ -469,6 +512,30 @@ async def test_search_entities_with_type_filter(test_entity_service):
 
 
 @pytest.mark.asyncio
+async def test_search_entities_with_system_type_filter(test_entity_service):
+    """Test searching entities filtered by the System entity type"""
+    user_id = uuid4()
+
+    await test_entity_service.create_entity(
+        user_id,
+        EntityCreate(name="payments-service", entity_type=EntityType.SYSTEM, tags=[]),
+    )
+    await test_entity_service.create_entity(
+        user_id,
+        EntityCreate(name="payments-team", entity_type=EntityType.TEAM, tags=[]),
+    )
+
+    results = await test_entity_service.search_entities(
+        user_id,
+        "payments",
+        entity_type=EntityType.SYSTEM,
+    )
+
+    assert len(results) == 1
+    assert results[0].entity_type == EntityType.SYSTEM
+
+
+@pytest.mark.asyncio
 async def test_search_entities_with_tags_filter(test_entity_service):
     """Test searching entities filtered by tags"""
     user_id = uuid4()
@@ -882,8 +949,8 @@ async def test_search_entities_name_and_aka(test_entity_service):
 
 
 @pytest.mark.asyncio
-async def test_get_entity_memories_basic(test_entity_service):
-    """Test getting memories linked to an entity"""
+async def test_get_entity_memories_basic(test_entity_service, mock_entity_repository):
+    """Test getting memories linked to an entity, including titles"""
     user_id = uuid4()
 
     # Create entity
@@ -894,19 +961,31 @@ async def test_get_entity_memories_basic(test_entity_service):
     )
     entity = await test_entity_service.create_entity(user_id, entity_data)
 
+    # Give the linked memories known titles
+    mock_entity_repository.set_memory_title(1, "Q3 Roadmap")
+    mock_entity_repository.set_memory_title(5, "Onboarding Notes")
+    mock_entity_repository.set_memory_title(10, "Architecture Decision Record")
+
     # Link some memories
     await test_entity_service.link_entity_to_memory(user_id, entity.id, 1)
     await test_entity_service.link_entity_to_memory(user_id, entity.id, 5)
     await test_entity_service.link_entity_to_memory(user_id, entity.id, 10)
 
     # Get entity memories
-    memory_ids, count = await test_entity_service.get_entity_memories(user_id, entity.id)
+    memory_ids, count, memories = await test_entity_service.get_entity_memories(user_id, entity.id)
 
     assert count == 3
     assert len(memory_ids) == 3
     assert 1 in memory_ids
     assert 5 in memory_ids
     assert 10 in memory_ids
+
+    # "memories" must carry (id, title) pairs matching memory_ids, in the same order
+    assert [mid for mid, _ in memories] == memory_ids
+    titles_by_id = dict(memories)
+    assert titles_by_id[1] == "Q3 Roadmap"
+    assert titles_by_id[5] == "Onboarding Notes"
+    assert titles_by_id[10] == "Architecture Decision Record"
 
 
 @pytest.mark.asyncio
@@ -923,10 +1002,11 @@ async def test_get_entity_memories_empty(test_entity_service):
     entity = await test_entity_service.create_entity(user_id, entity_data)
 
     # Get entity memories (should be empty, not error)
-    memory_ids, count = await test_entity_service.get_entity_memories(user_id, entity.id)
+    memory_ids, count, memories = await test_entity_service.get_entity_memories(user_id, entity.id)
 
     assert count == 0
     assert memory_ids == []
+    assert memories == []
 
 
 @pytest.mark.asyncio
@@ -957,18 +1037,20 @@ async def test_get_entity_memories_after_unlink(test_entity_service):
     await test_entity_service.link_entity_to_memory(user_id, entity.id, 3)
 
     # Verify initial state
-    memory_ids, count = await test_entity_service.get_entity_memories(user_id, entity.id)
+    memory_ids, count, memories = await test_entity_service.get_entity_memories(user_id, entity.id)
     assert count == 3
+    assert len(memories) == 3
 
     # Unlink one memory
     await test_entity_service.unlink_entity_from_memory(user_id, entity.id, 2)
 
     # Verify memory was removed
-    memory_ids, count = await test_entity_service.get_entity_memories(user_id, entity.id)
+    memory_ids, count, memories = await test_entity_service.get_entity_memories(user_id, entity.id)
     assert count == 2
     assert 1 in memory_ids
     assert 3 in memory_ids
     assert 2 not in memory_ids
+    assert {mid for mid, _ in memories} == {1, 3}
 
 
 @pytest.mark.asyncio
@@ -990,8 +1072,9 @@ async def test_get_entity_memories_user_isolation(test_entity_service):
     await test_entity_service.link_entity_to_memory(user_id_1, entity.id, 2)
 
     # User 1 can see memories
-    memory_ids, count = await test_entity_service.get_entity_memories(user_id_1, entity.id)
+    memory_ids, count, memories = await test_entity_service.get_entity_memories(user_id_1, entity.id)
     assert count == 2
+    assert len(memories) == 2
 
     # User 2 should get NotFoundError (entity not owned by them)
     with pytest.raises(NotFoundError):

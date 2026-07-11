@@ -97,7 +97,7 @@ def register(mcp: FastMCP):
                 entity_type = EntityType(entity_type_str)
             except ValueError:
                 return JSONResponse(
-                    {"error": f"Invalid entity_type: {entity_type_str}. Valid values: Individual, Organization, Team, Device, Other"},
+                    {"error": f"Invalid entity_type: {entity_type_str}. Valid values: Individual, Organization, Team, Device, System, Other"},
                     status_code=400,
                 )
 
@@ -231,7 +231,7 @@ def register(mcp: FastMCP):
                 entity_type = EntityType(entity_type_str)
             except ValueError:
                 return JSONResponse(
-                    {"error": f"Invalid entity_type: {entity_type_str}. Valid values: Individual, Organization, Team, Device, Other"},
+                    {"error": f"Invalid entity_type: {entity_type_str}. Valid values: Individual, Organization, Team, Device, System, Other"},
                     status_code=400,
                 )
 
@@ -314,7 +314,7 @@ def register(mcp: FastMCP):
         entity_id = int(request.path_params["entity_id"])
 
         try:
-            memory_ids, count = await mcp.entity_service.get_entity_memories(
+            memory_ids, count, memories = await mcp.entity_service.get_entity_memories(
                 user_id=user.id,
                 entity_id=entity_id,
             )
@@ -324,6 +324,7 @@ def register(mcp: FastMCP):
         return JSONResponse({
             "memory_ids": memory_ids,
             "count": count,
+            "memories": [{"id": mid, "title": title} for mid, title in memories],
         })
 
     # Entity Relationships

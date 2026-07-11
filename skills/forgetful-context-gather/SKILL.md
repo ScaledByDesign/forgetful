@@ -45,9 +45,11 @@ Done when: the angles are listed before any query runs.
 
 ## Step 2 — Recall per angle
 
-`query_memory` per angle, with `query_context` carrying the task's intent (per
-`forgetful-recall`: reads cross-project by default, identifiers verbatim, `truncated`
-handled). Track which angles hit and which came up dry.
+`query_memory` per angle — `query` and `query_context` are both required, and
+`query_context` should carry the task's intent (per `forgetful-recall`: reads cross-project
+by default, identifiers verbatim, `truncated` handled). Skills referenced by name in this
+skill resolve via `search_skills` → `export_skill` when not already available. Track which
+angles hit and which came up dry.
 
 Done when: every angle has run and its outcome is recorded.
 
@@ -67,7 +69,17 @@ already do the task, `get_skill_links` for what those procedures bundle.
 
 Done when: load-bearing linked material is read, not just listed.
 
-## Step 5 — Synthesize the pack
+## Step 5 — Sweep for unlinked material
+
+Link-following only surfaces what a hit already points to — a document or code artifact
+that no surfaced memory links to stays invisible to that flow. Close the gap:
+`list_documents` and `list_code_artifacts`, scoped with `project_id` when the task is
+project-bound, then scan titles for relevance. `search_skills` already searches skills
+directly, so no separate sweep is needed there.
+
+Done when: documents and code artifacts have been swept by title, not just reached by link.
+
+## Step 6 — Synthesize the pack
 
 Assemble, in order of usefulness to the task:
 

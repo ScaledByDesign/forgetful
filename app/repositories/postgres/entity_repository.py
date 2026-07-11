@@ -1253,15 +1253,15 @@ class PostgresEntityRepository:
         self,
         user_id: UUID,
         entity_id: int,
-    ) -> list[int]:
-        """Get all memory IDs linked to a specific entity
+    ) -> list[tuple[int, str]]:
+        """Get all memories linked to a specific entity
 
         Args:
             user_id: User ID for ownership verification
             entity_id: Entity ID to get memories for
 
         Returns:
-            List of memory IDs linked to this entity
+            List of (memory_id, title) tuples for memories linked to this entity
 
         Raises:
             NotFoundError: If entity not found or not owned by user
@@ -1279,9 +1279,10 @@ class PostgresEntityRepository:
                 if not entity:
                     raise NotFoundError(f"Entity {entity_id} not found")
 
-                # Query the association table for memory IDs linked to this entity
+                # Query the association table for memory id/title pairs linked to this entity
                 stmt = select(
                     memory_entity_association.c.memory_id,
+                    MemoryTable.title,
                 ).select_from(
                     memory_entity_association,
                 ).join(
@@ -1293,7 +1294,7 @@ class PostgresEntityRepository:
                 )
 
                 result = await session.execute(stmt)
-                return [row.memory_id for row in result]
+                return [(row.memory_id, row.title) for row in result]
 
         except NotFoundError:
             raise

@@ -332,7 +332,7 @@ required. It executes the same tool registry the meta-tools use.
 
 ```bash
 uv tool install forgetful-ai
-forgetful memory search "wsl dns"
+forgetful memory search "wsl dns" -c "wsl networking"
 forgetful memory save "content" --title "Title" --importance 7
 ```
 
@@ -376,7 +376,7 @@ forgetful auth login --server https://forgetful.example.com
 # FORGETFUL_SERVER to ~/.config/forgetful/.env
 
 forgetful auth status    # server, authenticated user, cached credentials
-forgetful memory search "deployment checklist"   # runs remotely
+forgetful memory search "deployment checklist" -c "release prep"   # runs remotely
 forgetful auth logout    # clears the local token cache
 ```
 

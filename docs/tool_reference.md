@@ -1043,7 +1043,7 @@ Create an entity representing a real-world thing.
 
 **Parameters:**
 - `name` (required): Entity name
-- `entity_type` (required): Type (`Organization`, `Individual`, `Team`, `Device`, `Other`)
+- `entity_type` (required): Type (`Organization`, `Individual`, `Team`, `Device`, `System`, `Other`)
 - `description` (optional): Entity description
 - `tags` (optional): Categorization tags
 - `aka` (optional): Alternative names/aliases (max 10). Searchable via `search_entities`.

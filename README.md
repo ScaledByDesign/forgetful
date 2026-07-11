@@ -185,7 +185,7 @@ uv tool install forgetful-ai
 # Curated verbs for daily use
 forgetful memory save "Set generateResolvConf false to fix WSL2 DNS" \
     --title "WSL2 DNS fix" --importance 7
-forgetful memory search "wsl dns" -n 5
+forgetful memory search "wsl dns" -c "wsl networking" -n 5
 forgetful memory get 812
 forgetful memory recent -n 10 -p my-project
 forgetful project list
@@ -198,11 +198,11 @@ forgetful call create_project --args '{"name": "Homelab", "description": "...", 
 # Remote deployment (browser OAuth; saves FORGETFUL_SERVER to ~/.config/forgetful/.env)
 forgetful auth login --server https://forgetful.example.com
 forgetful auth status
-forgetful memory search "wsl dns"          # now runs against the remote server
-forgetful memory search "wsl dns" --local  # force local mode per invocation
+forgetful memory search "wsl dns" -c "wsl networking"          # now runs remotely
+forgetful memory search "wsl dns" -c "wsl networking" --local  # force local mode per invocation
 
 # Scripting: --json emits machine-readable output
-forgetful memory search "wsl dns" --json | jq '.primary_memories[0].id'
+forgetful memory search "wsl dns" -c "wsl networking" --json | jq '.primary_memories[0].id'
 ```
 
 `forgetful serve` is the canonical way to run the MCP server (`forgetful serve
@@ -364,7 +364,7 @@ When you create a memory:
 ### Entities and Knowledge Graphs
 
 Entities represent concrete, real-world things (people, organizations, teams, devices) that can be linked to memories:
-  - **Typed entities** – Organizations, Individuals, Teams, Devices, or custom types
+  - **Typed entities** – Organizations, Individuals, Teams, Devices, Systems, or custom types
   - **Relationships** – Directional connections (e.g., "Person works_at Organization") with strength and metadata
   - **Memory linking** – Associate entities with relevant memories for context
   - **Knowledge graph** – Build networks showing how entities relate to each other and your knowledge base

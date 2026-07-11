@@ -81,7 +81,10 @@ def test_memory_search_finds_saved_memory_in_human_format(cli_sqlite_env, monkey
     )
     assert code == 0
 
-    code, out, _ = invoke_cli(monkeypatch, capsys, ["memory", "search", "WSL2 DNS"])
+    code, out, _ = invoke_cli(
+        monkeypatch, capsys,
+        ["memory", "search", "WSL2 DNS", "-c", "fixing wsl networking"],
+    )
     assert code == 0
     line = next(ln for ln in out.splitlines() if "WSL2 DNS resolution fix" in ln)
     assert line.startswith("#1")
@@ -93,7 +96,8 @@ def test_memory_search_json_mode_emits_full_payload(cli_sqlite_env, monkeypatch,
     _save(monkeypatch, capsys, "JSON payload content", "JSON payload memory")
 
     code, out, _ = invoke_cli(
-        monkeypatch, capsys, ["memory", "search", "JSON payload", "--json"],
+        monkeypatch, capsys,
+        ["memory", "search", "JSON payload", "--json", "-c", "verifying json output"],
     )
 
     assert code == 0
@@ -158,7 +162,8 @@ def test_project_name_flag_resolves_and_scopes_search(cli_sqlite_env, monkeypatc
 
     code, out, _ = invoke_cli(
         monkeypatch, capsys,
-        ["memory", "search", "scoped project memory", "-p", "Scoped project"],
+        ["memory", "search", "scoped project memory", "-p", "Scoped project",
+         "-c", "checking project scoping"],
     )
     assert code == 0
     assert "Scoped memory" in out
@@ -175,10 +180,23 @@ def test_unknown_project_name_exits_one_with_available_names(
     invoke_cli(monkeypatch, capsys, ["call", "create_project", "--args", project_args])
 
     code, out, err = invoke_cli(
-        monkeypatch, capsys, ["memory", "search", "anything", "-p", "no-such-project"],
+        monkeypatch, capsys,
+        ["memory", "search", "anything", "-p", "no-such-project", "-c", "sanity check"],
     )
 
     assert code == 1
     assert out == ""
     assert "no-such-project" in err
     assert "Only project" in err
+
+
+def test_memory_search_without_context_exits_two(cli_sqlite_env, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["forgetful", "memory", "search", "WSL2 DNS"])
+
+    with pytest.raises(SystemExit) as excinfo:
+        main.cli()
+
+    assert excinfo.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "--context" in captured.err

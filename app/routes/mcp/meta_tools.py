@@ -83,7 +83,7 @@ _DISCOVER_CORE_SECTIONS = """\
     - link_entity_to_project: Connect entity to project (organizational grouping)
     - unlink_entity_from_project: Remove entity-project link
     - get_entity_memories: Get all memories linked to entity
-    - create_entity_relationship: Create typed relationship (works_for, owns, etc.)
+    - create_entity_relationship: Create relationship (part_of, depends_on, works_for, etc.)
     - get_entity_relationships: Get relationships for entity
     - update_entity_relationship: Modify relationship
     - delete_entity_relationship: Remove relationship"""

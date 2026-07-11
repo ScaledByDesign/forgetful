@@ -369,7 +369,7 @@ List all entities.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `entity_type` | string | Filter by type: `Individual`, `Organization`, `Team`, `Device`, `Other` |
+| `entity_type` | string | Filter by type: `Individual`, `Organization`, `Team`, `Device`, `System`, `Other` |
 
 **Response:**
 ```json
