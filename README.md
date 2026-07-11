@@ -210,7 +210,9 @@ forgetful memory search "wsl dns" -c "wsl networking" --json | jq '.primary_memo
 the legacy `--transport`/`--re-embed` flags keep working indefinitely, so existing MCP
 client configurations are unaffected. Headless environments can set `FORGETFUL_TOKEN`
 (bearer) instead of the OAuth flow. See the
-[Configuration Guide](docs/configuration.md#cli-configuration) for precedence rules.
+[Configuration Guide](docs/configuration.md#cli-configuration) for precedence rules, or walk
+through the [`forgetful-cli-setup`](skills/forgetful-cli-setup/SKILL.md) skill for install,
+auth, and verification steps end-to-end.
 
 
 ---
