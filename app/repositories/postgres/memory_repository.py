@@ -81,6 +81,9 @@ class PostgresMemoryRepository:
         else:
             candidates_to_return = k
 
+        # Dense (paraphrase) and sparse (exact-term) legs run, then fuse by RRF — the
+        # hybrid the docstring always promised but never implemented. Both fetch the same
+        # candidate depth so neither leg is starved before fusion.
         dense_candidates = await self.semantic_search(
             user_id=user_id,
             query=query,
@@ -89,6 +92,16 @@ class PostgresMemoryRepository:
             project_ids=project_ids,
             exclude_ids=exclude_ids,
         )
+        sparse_candidates = await self.sparse_search(
+            user_id=user_id,
+            query=query,
+            k=candidates_to_return,
+            importance_threshold=importance_threshold,
+            project_ids=project_ids,
+            exclude_ids=exclude_ids,
+        )
+        fused = self._reciprocal_rank_fusion([dense_candidates, sparse_candidates])
+        dense_candidates = fused[:candidates_to_return]
 
         if not dense_candidates or not settings.RERANKING_ENABLED or len(dense_candidates) <= k:
             return dense_candidates
@@ -110,6 +123,84 @@ class PostgresMemoryRepository:
         return top_k_memories
 
 
+
+    async def sparse_search(
+            self,
+            user_id: UUID,
+            query: str,
+            k: int,
+            importance_threshold: int | None,
+            project_ids: list[int] | None,
+            exclude_ids: list[int] | None,
+    ) -> list[Memory]:
+        """Lexical (BM25-style) search over the generated `search_vector` tsvector.
+
+        The complement to semantic_search: this matches exact terms — a symbol, an error
+        string, a hostname — that vector similarity blurs. `websearch_to_tsquery` parses
+        the raw query the way a user types it (quotes, OR, negation) rather than requiring
+        tsquery syntax. Ranked by `ts_rank_cd`, which respects the A/B/C weights the
+        generated column assigns to title/content/context.
+        """
+        from sqlalchemy import func
+
+        query_text = query.strip()
+        if not query_text:
+            return []
+
+        tsquery = func.websearch_to_tsquery("english", query_text)
+        stmt = (
+            select(MemoryTable)
+            .options(
+                selectinload(MemoryTable.linked_memories),
+                selectinload(MemoryTable.linking_memories),
+                selectinload(MemoryTable.projects),
+                selectinload(MemoryTable.code_artifacts),
+                selectinload(MemoryTable.documents),
+                selectinload(MemoryTable.files),
+            )
+            .where(
+                MemoryTable.user_id == user_id,
+                MemoryTable.is_obsolete.is_(False),
+                MemoryTable.search_vector.op("@@")(tsquery),
+            )
+        )
+        if importance_threshold:
+            stmt = stmt.where(MemoryTable.importance >= importance_threshold)
+        if project_ids:
+            project_filter = select(memory_project_association.c.memory_id).where(
+                memory_project_association.c.memory_id == MemoryTable.id,
+                memory_project_association.c.project_id.in_(project_ids),
+            ).exists()
+            stmt = stmt.where(project_filter)
+        if exclude_ids:
+            stmt = stmt.where(MemoryTable.id.not_in(exclude_ids))
+
+        stmt = stmt.order_by(func.ts_rank_cd(MemoryTable.search_vector, tsquery).desc()).limit(k)
+
+        async with self.db_adapter.session(user_id) as session:
+            result = await session.execute(stmt)
+            return list(result.scalars().all())
+
+    @staticmethod
+    def _reciprocal_rank_fusion(
+            ranked_lists: list[list[Memory]],
+            k_rrf: int = 60,
+    ) -> list[Memory]:
+        """Merge several ranked candidate lists into one by reciprocal rank fusion.
+
+        RRF scores each memory by sum(1 / (k_rrf + rank)) across the lists it appears in,
+        so a memory ranked well by *either* dense or sparse rises, and one ranked well by
+        *both* rises highest — which is exactly the paraphrase-and-exact coverage the two
+        legs are for. k_rrf=60 is the standard constant; it damps the influence of very
+        high ranks so no single list dominates.
+        """
+        scores: dict[int, float] = {}
+        by_id: dict[int, Memory] = {}
+        for ranked in ranked_lists:
+            for rank, mem in enumerate(ranked):
+                scores[mem.id] = scores.get(mem.id, 0.0) + 1.0 / (k_rrf + rank + 1)
+                by_id[mem.id] = mem
+        return [by_id[mid] for mid in sorted(scores, key=lambda m: scores[m], reverse=True)]
 
     async def semantic_search(
             self,
