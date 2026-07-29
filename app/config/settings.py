@@ -110,7 +110,11 @@ class Settings(BaseSettings):
     MEMORY_KEYWORDS_MAX_COUNT: int = 10     # For semantic clustering
     MEMORY_TAGS_MAX_COUNT: int = 10         # For categorization
     MEMORY_TOKEN_BUDGET: int = 8000         # token budget for retrieved memories (to protect context window)
-    MEMORY_MAX_MEMORIES: int = 20           # maximum number of memories that can be retrieved from a query
+    MEMORY_MAX_MEMORIES: int = 20
+    # Default number of primary results a query returns when the caller does not ask for
+    # a specific k. Upstream hardcodes 3, which starves broad questions on a 28k-memory
+    # store. 5 is a better default and still well under MEMORY_MAX_MEMORIES (20).
+    MEMORY_DEFAULT_K: int = 5
     MEMORY_NUM_AUTO_LINK: int = 3           # number of memories to automatically link
 
     # Project Configuration

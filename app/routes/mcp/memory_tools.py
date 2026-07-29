@@ -174,7 +174,7 @@ def register(mcp: FastMCP):
         query: str,
         query_context: str,
         ctx: Context,
-        k: int = 3,
+        k: int | None = None,
         include_links: bool = True,
         max_links_per_primary: int = 5,
         importance_threshold: int = None,
@@ -225,6 +225,9 @@ def register(mcp: FastMCP):
 
             user = await get_user_from_auth(ctx)
 
+            # Default to the configured MEMORY_DEFAULT_K (5) rather than a hardcoded 3.
+            if k is None:
+                k = settings.MEMORY_DEFAULT_K
             k = max(1, min(k, 20))
 
             if importance_threshold is not None:
