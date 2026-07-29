@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    FetchedValue,
     Boolean,
     Column,
     DateTime,
@@ -16,7 +17,7 @@ from sqlalchemy import (
     Table,
     Text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -194,6 +195,15 @@ class MemoryTable(Base):
    # Meta Data
     importance: Mapped[int] = mapped_column(Integer, nullable=False)
     embedding: Mapped[Vector] = mapped_column(Vector(settings.EMBEDDING_DIMENSIONS), nullable=False)
+
+    # Lexical search vector, maintained by Postgres as a generated column (see migration
+    # 20260729_bm25_tsvector). The ORM must know the column exists so sparse_search can
+    # reference MemoryTable.search_vector, but must never write it — hence FetchedValue
+    # and no place in INSERT/UPDATE. Nullable because rows predating the migration could
+    # in principle lack it; in practice the generated column backfilled all of them.
+    search_vector: Mapped[str | None] = mapped_column(
+        TSVECTOR, FetchedValue(), nullable=True
+    )
 
     # Provenance tracking (optional) - for tracing AI-generated content
     source_repo: Mapped[str] = mapped_column(Text, nullable=True)
