@@ -1,8 +1,12 @@
 FROM python:3.12-slim
 
-# Build arg for version (needed for hatch-vcs without .git)
+# Build arg for version (needed for hatch-vcs without .git). This project's build
+# backend is hatch-vcs, which reads HATCH_VCS_PRETEND_VERSION — the previous
+# SETUPTOOLS_SCM_PRETEND_VERSION was inert, so a build from a checkout with no .git
+# failed with InvalidVersion. Both are set for belt-and-suspenders.
 ARG VERSION=0.0.0+dev
 ENV SETUPTOOLS_SCM_PRETEND_VERSION=$VERSION
+ENV HATCH_VCS_PRETEND_VERSION=$VERSION
 
 WORKDIR /app
 
