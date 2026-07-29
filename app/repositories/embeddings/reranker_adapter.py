@@ -22,7 +22,7 @@ class FastEmbedCrossEncoderAdapter:
     def __init__(
             self,
             model: str = settings.RERANKING_MODEL,
-            threads: int = 1,
+            threads: int = settings.RERANKING_THREADS,
             cache_dir: str | None  = None,
     ):
         """Intialise FastEmbed cross encoder"""

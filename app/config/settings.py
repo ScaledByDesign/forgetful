@@ -221,6 +221,12 @@ class Settings(BaseSettings):
     RERANKING_URL: str = ""                      # custom endpoints (e.g. http://localhost:8080/v1/rerank)
     RERANKING_API_KEY: str = ""
     RERANKING_MODEL: str = "Xenova/ms-marco-MiniLM-L-12-v2"
+    # Threads the FastEmbed cross-encoder runs on. Upstream hardcodes 1, which pins the
+    # reranker to a single core: on an 8-core host a 20-candidate rerank took 5.5s and
+    # dominated total recall latency. Measured on that host, threads=4 -> 1.8s (a 3x
+    # win) and threads=8 -> 2.1s (thread overhead on a small model), so 4 is the sweet
+    # spot and the default. Operators tune it per host via RERANKING_THREADS.
+    RERANKING_THREADS: int = 4
     DENSE_SEARCH_CANDIDATES: int = 20 # number of candidates to retrieve from the dense search
 
     # FASTEMBED CACHE CONFIGURATION
