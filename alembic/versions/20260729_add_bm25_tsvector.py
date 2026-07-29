@@ -27,15 +27,21 @@ def upgrade() -> None:
     # A generated tsvector so Postgres keeps it in sync with no writer changes. Weights
     # (A=title, B=content, C=context/keywords) let ts_rank favour a title hit over a
     # passing mention deep in the body. coalesce guards the nullable columns.
+    # `to_tsvector('english'::regconfig, ...)` is immutable, which a generated column
+    # requires. Keywords are deliberately NOT folded in here: `array_to_string` is only
+    # STABLE, not IMMUTABLE, so including it makes the whole generation expression illegal
+    # (Postgres rejects it with "generation expression is not immutable"). Title +
+    # content + context already carry the exact terms lexical search exists to catch;
+    # keyword matching, if wanted later, belongs in a trigger-maintained column, not a
+    # generated one.
     op.execute(
         """
         ALTER TABLE memories
         ADD COLUMN IF NOT EXISTS search_vector tsvector
         GENERATED ALWAYS AS (
-            setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
-            setweight(to_tsvector('english', coalesce(content, '')), 'B') ||
-            setweight(to_tsvector('english', coalesce(context, '')), 'C') ||
-            setweight(to_tsvector('english', coalesce(array_to_string(keywords, ' '), '')), 'C')
+            setweight(to_tsvector('english'::regconfig, coalesce(title, '')), 'A') ||
+            setweight(to_tsvector('english'::regconfig, coalesce(content, '')), 'B') ||
+            setweight(to_tsvector('english'::regconfig, coalesce(context, '')), 'C')
         ) STORED
         """
     )
