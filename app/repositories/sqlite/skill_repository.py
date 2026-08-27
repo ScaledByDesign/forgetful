@@ -533,15 +533,21 @@ class SqliteSkillRepository:
                         for s in summaries
                     ]
 
-                    ranked = await self.rerank_adapter.rerank(
-                        query=query_text,
-                        documents=documents,
-                    )
-
-                    summaries = [
-                        summaries[idx]
-                        for idx, _score in ranked[:k]
-                    ]
+                    try:
+                        ranked = await self.rerank_adapter.rerank(
+                            query=query_text,
+                            documents=documents,
+                        )
+                        summaries = [
+                            summaries[idx]
+                            for idx, _score in ranked[:k]
+                        ]
+                    except Exception as exc:
+                        logger.warning(
+                            "Skill reranking failed (%s); using pre-rerank order.",
+                            exc,
+                        )
+                        summaries = summaries[:k]
 
                 return summaries
 

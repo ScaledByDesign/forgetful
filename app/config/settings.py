@@ -231,6 +231,15 @@ class Settings(BaseSettings):
     # win) and threads=8 -> 2.1s (thread overhead on a small model), so 4 is the sweet
     # spot and the default. Operators tune it per host via RERANKING_THREADS.
     RERANKING_THREADS: int = 4
+    # Read/connect timeout (seconds) for the HTTP reranker. A wedged remote
+    # reranker (e.g. a GPU that has fallen off the bus) otherwise hangs the whole
+    # query indefinitely; with this it fails fast and the fallback/degrade paths
+    # engage.
+    RERANKING_HTTP_TIMEOUT: float = 5.0
+    # When the HTTP reranker fails, rerank locally on CPU instead of dropping
+    # reranking entirely. Keeps ranking quality when the remote (GPU) reranker is
+    # down, at the cost of CPU-reranking latency for those queries.
+    RERANKING_HTTP_CPU_FALLBACK: bool = True
     DENSE_SEARCH_CANDIDATES: int = 20 # number of candidates to retrieve from the dense search
 
     # FASTEMBED CACHE CONFIGURATION

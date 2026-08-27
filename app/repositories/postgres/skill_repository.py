@@ -391,13 +391,21 @@ class PostgresSkillRepository:
                 if not skills:
                     return []
 
-                # Apply cross-encoder reranking if available
+                # Apply cross-encoder reranking if available. Degrade to the
+                # pre-rerank order if reranking fails rather than losing results.
                 if self.rerank_adapter is not None and len(skills) > k:
                     documents = [s.description for s in skills]
-                    ranked = await self.rerank_adapter.rerank(
-                        query=query, documents=documents,
-                    )
-                    skills = [skills[idx] for idx, score in ranked[:k]]
+                    try:
+                        ranked = await self.rerank_adapter.rerank(
+                            query=query, documents=documents,
+                        )
+                        skills = [skills[idx] for idx, score in ranked[:k]]
+                    except Exception as exc:
+                        logger.warning(
+                            "Skill reranking failed (%s); using pre-rerank order.",
+                            exc,
+                        )
+                        skills = skills[:k]
 
                 return [SkillSummary.model_validate(s) for s in skills]
 

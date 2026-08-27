@@ -170,8 +170,9 @@ async def test_rerank_without_api_key_no_auth_header(mock_settings_no_key):
 
 
 @pytest.mark.asyncio
-async def test_rerank_http_error_propagates(mock_settings):
-    """raise_for_status propagates HTTP errors."""
+async def test_rerank_http_error_propagates_when_cpu_fallback_disabled(mock_settings):
+    """With CPU fallback disabled, an HTTP error propagates so the caller degrades."""
+    mock_settings.RERANKING_HTTP_CPU_FALLBACK = False
     from app.repositories.embeddings.reranker_adapter import HttpRerankAdapter
 
     mock_response = MagicMock()
@@ -189,3 +190,34 @@ async def test_rerank_http_error_propagates(mock_settings):
 
         with pytest.raises(httpx.HTTPStatusError):
             await adapter.rerank("query", ["doc"])
+
+
+@pytest.mark.asyncio
+async def test_rerank_falls_back_to_cpu_when_http_fails(mock_settings):
+    """With CPU fallback enabled (default), an HTTP failure reranks locally on CPU."""
+    mock_settings.RERANKING_HTTP_CPU_FALLBACK = True
+    from app.repositories.embeddings.reranker_adapter import HttpRerankAdapter
+
+    mock_response = MagicMock()
+    mock_response.raise_for_status.side_effect = httpx.ConnectTimeout("timed out")
+
+    mock_client = AsyncMock()
+    mock_client.post.return_value = mock_response
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    # Stub the CPU fallback so the test needs no model download.
+    cpu = AsyncMock()
+    cpu.rerank = AsyncMock(return_value=[(1, 0.9), (0, 0.1)])
+
+    with patch(
+        "app.repositories.embeddings.reranker_adapter.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        adapter = HttpRerankAdapter()
+        adapter._cpu_fallback = cpu  # inject the stub; _get_cpu_fallback reuses it
+
+        result = await adapter.rerank("query", ["a", "b"])
+
+    assert result == [(1, 0.9), (0, 0.1)]
+    cpu.rerank.assert_awaited_once()

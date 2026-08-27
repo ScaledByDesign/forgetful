@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Protocol
 
@@ -6,6 +7,8 @@ import httpx
 
 from app.config.settings import settings
 from app.repositories.embeddings.fastembed_offline import load_fastembed_model
+
+logger = logging.getLogger(__name__)
 
 
 class RerankAdapter(Protocol):
@@ -105,7 +108,22 @@ class HttpRerankAdapter:
         self.model = model if model is not None else settings.RERANKING_MODEL
         self.url = url if url is not None else settings.RERANKING_URL
         self.api_key = api_key if api_key is not None else settings.RERANKING_API_KEY
+        # Bounded timeout so a wedged remote reranker (e.g. a GPU that has fallen
+        # off the bus) fails fast instead of hanging the whole query.
+        self.timeout = settings.RERANKING_HTTP_TIMEOUT
+        # Lazily-built local CPU reranker used as a fallback when the HTTP
+        # endpoint is unreachable/slow, so recall degrades to CPU reranking
+        # rather than to no reranking. Built on first fallback and reused.
+        self._cpu_fallback: FastEmbedCrossEncoderAdapter | None = None
 
+    def _get_cpu_fallback(self) -> "FastEmbedCrossEncoderAdapter | None":
+        if not settings.RERANKING_HTTP_CPU_FALLBACK:
+            return None
+        if self._cpu_fallback is None:
+            self._cpu_fallback = FastEmbedCrossEncoderAdapter(
+                cache_dir=settings.FASTEMBED_CACHE_DIR,
+            )
+        return self._cpu_fallback
 
     async def rerank(
             self,
@@ -126,14 +144,32 @@ class HttpRerankAdapter:
             "model": self.model,
         }
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(url=self.url, headers=headers, json=payload)
-            response.raise_for_status()
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(url=self.url, headers=headers, json=payload)
+                response.raise_for_status()
 
-        response_json = response.json()
+            response_json = response.json()
 
-        ranked = [(r["index"], r["relevance_score"]) for r in response_json["results"]]
-
-        return ranked
+            return [
+                (r["index"], r["relevance_score"])
+                for r in response_json["results"]
+            ]
+        except Exception as exc:
+            # HTTP reranker unreachable/slow/erroring. Fall back to a local CPU
+            # reranker if enabled; if that also fails, re-raise so the caller can
+            # degrade to the pre-rerank order (memory stays up either way).
+            fallback = self._get_cpu_fallback()
+            if fallback is None:
+                logger.warning(
+                    "HTTP reranker failed (%s) and CPU fallback disabled; "
+                    "caller should degrade to pre-rerank order.", exc,
+                )
+                raise
+            logger.warning(
+                "HTTP reranker failed (%s); falling back to local CPU reranker.",
+                exc,
+            )
+            return await fallback.rerank(query=query, documents=documents)
 
 

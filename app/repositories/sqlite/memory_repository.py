@@ -110,7 +110,15 @@ class SqliteMemoryRepository:
         else:
             rerank_query = query
 
-        ranked = await self.rerank_adapter.rerank(query=rerank_query, documents=documents)
+        try:
+            ranked = await self.rerank_adapter.rerank(query=rerank_query, documents=documents)
+        except Exception as exc:
+            # Reranking (remote and any CPU fallback) failed. Degrade to the
+            # fused dense+sparse order rather than failing the query.
+            logger.warning(
+                "Reranking failed (%s); returning pre-rerank fused order.", exc,
+            )
+            return dense_candidates[:k]
 
         top_k_memories = [dense_candidates[idx] for idx, score in ranked[:k]]
 
